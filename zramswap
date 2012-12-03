@@ -43,24 +43,24 @@ case "$1" in
 		#stat_busy "Enabling zRam"
 		# get the amount of memory in the machine
 		mem_total_kb=`grep MemTotal /proc/meminfo | grep -E --only-matching '[[:digit:]]+'`
-		mem_total=`expr $mem_total_kb \* 1024`
+		mem_total=`expr $mem_total_kb \* 1024 / 2`
 
 		# load dependency modules
 		modprobe zram zram_num_devices=$num_cpus
 
 		# initialize the devices
 		for i in `seq 0 $decr_num_cpus`; do
-		echo `expr $mem_total / $num_cpus` > /sys/block/zram$i/disksize
+			echo `expr $mem_total / $num_cpus` > /sys/block/zram$i/disksize
 		done
 
 		# Creating swap filesystems
 		for i in `seq 0 $decr_num_cpus`; do
-		mkswap /dev/zram$i
+			mkswap /dev/zram$i
 		done
 
 		# Switch the swaps on
 		for i in `seq 0 $decr_num_cpus`; do
-		swapon -p 100 /dev/zram$i
+			swapon -p 100 /dev/zram$i
 		done
 
 		log_end_msg 0
@@ -68,11 +68,9 @@ case "$1" in
 	stop)
 		[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
 		# Switching off swap
-		for i in `seq 0 $decr_num_cpus`; do
-		if [ "`grep /dev/zram$i /proc/swaps`" != "" ]; then
-		swapoff /dev/zram$i
-		sync
-		fi
+		for dev in `grep -o "/dev/zram[0-9]\+" /proc/swaps`; do
+			swapoff "$dev"
+			sync
 		done
 
 		rmmod zram

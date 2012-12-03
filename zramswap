@@ -1,0 +1,84 @@
+#!/bin/sh
+
+# Debian sysvinit for zram
+# 
+# Extracted from somewhare from internet
+# Adopted from ARCH version
+
+
+### BEGIN INIT INFO
+# Provides:          zramswap
+# Required-Start:    $local_fs $syslog
+# Required-Stop:     $local_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Setup zram swap
+# Description:
+### END INIT INFO
+
+NAME=zramswap
+DESC="zram compressed swap in RAM"
+
+#. /etc/rc.conf
+#. /etc/rc.d/functions
+
+# Read configuration variable file if it is present
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+
+# Load the VERBOSE setting and other rcS variables
+[ -f /etc/default/rcS ] && . /etc/default/rcS
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
+. /lib/lsb/init-functions
+
+# get the number of CPUs
+num_cpus=`grep -c processor /proc/cpuinfo`
+# set decremented number of CPUs
+decr_num_cpus=`expr $num_cpus - 1`
+
+case "$1" in
+	start)
+	    	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
+		#stat_busy "Enabling zRam"
+		# get the amount of memory in the machine
+		mem_total_kb=`grep MemTotal /proc/meminfo | grep -E --only-matching '[[:digit:]]+'`
+		mem_total=`expr $mem_total_kb \* 1024`
+
+		# load dependency modules
+		modprobe zram zram_num_devices=$num_cpus
+
+		# initialize the devices
+		for i in `seq 0 $decr_num_cpus`; do
+		echo `expr $mem_total / $num_cpus` > /sys/block/zram$i/disksize
+		done
+
+		# Creating swap filesystems
+		for i in `seq 0 $decr_num_cpus`; do
+		mkswap /dev/zram$i
+		done
+
+		# Switch the swaps on
+		for i in `seq 0 $decr_num_cpus`; do
+		swapon -p 100 /dev/zram$i
+		done
+
+		log_end_msg 0
+	;;
+	stop)
+		[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+		# Switching off swap
+		for i in `seq 0 $decr_num_cpus`; do
+		if [ "`grep /dev/zram$i /proc/swaps`" != "" ]; then
+		swapoff /dev/zram$i
+		sync
+		fi
+		done
+
+		rmmod zram
+		log_end_msg 0
+	;;
+	*)
+		echo "usage: $0 {start|stop}"
+esac
+

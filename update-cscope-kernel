@@ -1,0 +1,23 @@
+#!/bin/sh
+
+set -e
+
+CURDIR=${PWD}
+OUTDIR=~/.vim/cscope-kernel
+ARCH=arm
+
+echo Updating kernel cscope for: $CURDIR
+
+test -d $OUTDIR || mkdir -pv $OUTDIR
+
+find  $CURDIR                                    \
+	-path "$LNX/arch/*" ! -path "$LNX/arch/${ARCH}*" -prune -o               \
+	-path "$LNX/include/asm-*" ! -path "$LNX/include/asm-${ARCH}*" -prune -o \
+	-path "$LNX/tmp*" -prune -o                                           \
+	-path "$LNX/Documentation*" -prune -o                                 \
+	-path "$LNX/scripts*" -prune -o                                       \
+	-path "$LNX/drivers*" -prune -o                                       \
+        -name "*.[chxsS]" -print >${OUTDIR}/cscope.files
+
+cd ${OUTDIR} && cscope -b -q -k
+

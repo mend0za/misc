@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -e
+
+CURDIR=${PWD}
+OUTDIR=${PWD}/cscope
+
+echo Updating cscope for: $CURDIR
+
+test -d $OUTDIR || mkdir $OUTDIR
+cd /
+find $CURDIR -iname "*.[chs]" -o -iname "*.[ch]pp" >${OUTDIR}/cscope.files
+cd ${OUTDIR} && cscope -b -q -k
+

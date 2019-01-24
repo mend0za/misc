@@ -1,0 +1,13 @@
+#!/bin/sh
+
+export DISPLAY=":1"
+
+"/mnt/c/Program Files (x86)/x2goclient/VcXsrv/vcxsrv.exe" "$DISPLAY" \
+	-clipboard -primary -wgl \
+	-xkbmodel "pc102" -xkblayout "pl,ru(kom)" -xkboptions "grp:ctrl_shift_toggle,grp_led:scroll" &
+
+xrdb -merge ~/.Xresources
+
+#icewm-session --replace &
+exec i3
+
